@@ -36,6 +36,18 @@ public class Ticket {
     @Enumerated(EnumType.STRING)
     private TicketChannel channel = TicketChannel.WEB;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name= "requester_id", nullable = false)
+    private User requester;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assignee_id")
+    private User assignee;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="queue_id")
+    private Queue queue;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 
