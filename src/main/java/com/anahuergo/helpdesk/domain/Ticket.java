@@ -48,6 +48,13 @@ public class Ticket {
     @JoinColumn(name="queue_id")
     private Queue queue;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sla_policy_id")
+    private SlaPolicy slaPolicy;
+
+    private LocalDateTime firstResponseDueAt;
+    private LocalDateTime resolutionDueAt;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 
