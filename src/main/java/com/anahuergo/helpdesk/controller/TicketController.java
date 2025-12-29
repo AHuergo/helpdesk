@@ -1,10 +1,13 @@
 package com.anahuergo.helpdesk.controller;
 
 import com.anahuergo.helpdesk.domain.Ticket;
+import com.anahuergo.helpdesk.domain.TicketPriority;
 import com.anahuergo.helpdesk.domain.User;
 import com.anahuergo.helpdesk.repository.TicketRepository;
 import com.anahuergo.helpdesk.repository.UserRepository;
 import com.anahuergo.helpdesk.domain.TicketStatus;
+import com.anahuergo.helpdesk.domain.Queue;
+import com.anahuergo.helpdesk.repository.QueueRepository;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -14,10 +17,12 @@ public class TicketController {
 
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
+    private final QueueRepository queueRepository;
 
-    public TicketController(TicketRepository ticketRepository, UserRepository userRepository) {
+    public TicketController(TicketRepository ticketRepository, UserRepository userRepository, QueueRepository queueRepository) {
         this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
+        this.queueRepository = queueRepository;
     }
 
     @GetMapping
@@ -67,4 +72,33 @@ public class TicketController {
         return ticketRepository.save(ticket);
     }
 
+    @GetMapping("/status/{status}")
+    public List<Ticket> findByStatus(@PathVariable String status) {
+        return ticketRepository.findByStatus(TicketStatus.valueOf(status));
+    }
+
+    @GetMapping("/priority/{priority}")
+    public List<Ticket> findByPriority(@PathVariable String priority) {
+        return ticketRepository.findByPriority(TicketPriority.valueOf(priority));
+    }
+
+    @GetMapping("/assignee/{agentId}")
+    public List<Ticket> findByAssignee(@PathVariable Long agentId) {
+        User agent = userRepository.findById(agentId).orElseThrow();
+        return ticketRepository.findByAssignee(agent);
+    }
+
+    @PutMapping("/{id}/queue")
+    public Ticket assignQueue(@PathVariable Long id, @RequestParam Long queueId) {
+        Ticket ticket = ticketRepository.findById(id).orElseThrow();
+        Queue queue = queueRepository.findById(queueId).orElseThrow();
+        ticket.setQueue(queue);
+        return ticketRepository.save(ticket);
+    }
+
+    @GetMapping("/queue/{queueId}")
+    public List<Ticket> findByQueue(@PathVariable Long queueId) {
+        Queue queue = queueRepository.findById(queueId).orElseThrow();
+        return ticketRepository.findByQueue(queue);
+    }
 }
