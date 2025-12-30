@@ -7,7 +7,9 @@ import com.anahuergo.helpdesk.repository.TicketRepository;
 import com.anahuergo.helpdesk.repository.UserRepository;
 import com.anahuergo.helpdesk.domain.TicketStatus;
 import com.anahuergo.helpdesk.domain.Queue;
+import com.anahuergo.helpdesk.domain.SlaPolicy;
 import com.anahuergo.helpdesk.repository.QueueRepository;
+import com.anahuergo.helpdesk.repository.SlaPolicyRepository;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -18,11 +20,13 @@ public class TicketController {
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
     private final QueueRepository queueRepository;
+    private final SlaPolicyRepository slaPolicyRepository;
 
-    public TicketController(TicketRepository ticketRepository, UserRepository userRepository, QueueRepository queueRepository) {
+    public TicketController(TicketRepository ticketRepository, UserRepository userRepository, QueueRepository queueRepository, SlaPolicyRepository slaPolicyRepository) {
         this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
         this.queueRepository = queueRepository;
+        this.slaPolicyRepository = slaPolicyRepository;
     }
 
     @GetMapping
@@ -36,10 +40,20 @@ public class TicketController {
     }
 
     @PostMapping
-    public Ticket create(@RequestBody Ticket ticket, @RequestParam Long requesterId) {
+    public Ticket create(@RequestBody Ticket ticket, @RequestParam Long requesterId, @RequestParam(required=false) Long slaPolicyId) {
         User requester = userRepository.findById(requesterId).orElseThrow();
         ticket.setRequester(requester);
         ticket.setCode("TCK-" + System.currentTimeMillis());
+
+        if (slaPolicyId != null) {
+            SlaPolicy policy = slaPolicyRepository.findById(slaPolicyId).orElseThrow();
+            ticket.setSlaPolicy(policy);
+            
+            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+            ticket.setFirstResponseDueAt(now.plusMinutes(policy.getFirstResponseMinutes()));
+            ticket.setResolutionDueAt(now.plusMinutes(policy.getResolutionMinutes()));
+        }
+
         return ticketRepository.save(ticket);
     }
 
@@ -100,5 +114,13 @@ public class TicketController {
     public List<Ticket> findByQueue(@PathVariable Long queueId) {
         Queue queue = queueRepository.findById(queueId).orElseThrow();
         return ticketRepository.findByQueue(queue);
+    }
+
+    @GetMapping("/overdue")
+    public List<Ticket> findOverdue() {
+        return ticketRepository.findByFirstResponseDueAtBeforeAndStatusNot(
+            java.time.LocalDateTime.now(), 
+            TicketStatus.CLOSED
+        );
     }
 }
