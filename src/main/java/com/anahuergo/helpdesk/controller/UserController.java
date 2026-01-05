@@ -1,6 +1,7 @@
 package com.anahuergo.helpdesk.controller;
 
 import com.anahuergo.helpdesk.domain.User;
+import com.anahuergo.helpdesk.dto.UserResponse;
 import com.anahuergo.helpdesk.repository.UserRepository;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -16,13 +17,22 @@ public class UserController {
     }
 
     @GetMapping
-    public List<User> findAll() {
-        return userRepository.findAll();
+    public List<UserResponse> findAll() {
+        return userRepository.findAll().stream()
+                .map(UserResponse::new)
+                .toList();
+    }
+
+    @GetMapping("/{id}")
+    public UserResponse findById(@PathVariable Long id) {
+        User user = userRepository.findById(id).orElseThrow();
+        return new UserResponse(user);
     }
 
     @PostMapping
-    public User create(@RequestBody User user) {
-        return userRepository.save(user);
+    public UserResponse create(@RequestBody User user) {
+        User saved = userRepository.save(user);
+        return new UserResponse(saved);
     }
 
 }

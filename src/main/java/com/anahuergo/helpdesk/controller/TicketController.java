@@ -1,15 +1,8 @@
 package com.anahuergo.helpdesk.controller;
 
-import com.anahuergo.helpdesk.domain.Ticket;
-import com.anahuergo.helpdesk.domain.TicketPriority;
-import com.anahuergo.helpdesk.domain.User;
-import com.anahuergo.helpdesk.repository.TicketRepository;
-import com.anahuergo.helpdesk.repository.UserRepository;
-import com.anahuergo.helpdesk.domain.TicketStatus;
-import com.anahuergo.helpdesk.domain.Queue;
-import com.anahuergo.helpdesk.domain.SlaPolicy;
-import com.anahuergo.helpdesk.repository.QueueRepository;
-import com.anahuergo.helpdesk.repository.SlaPolicyRepository;
+import com.anahuergo.helpdesk.domain.*;
+import com.anahuergo.helpdesk.dto.TicketResponse;
+import com.anahuergo.helpdesk.repository.*;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -22,7 +15,10 @@ public class TicketController {
     private final QueueRepository queueRepository;
     private final SlaPolicyRepository slaPolicyRepository;
 
-    public TicketController(TicketRepository ticketRepository, UserRepository userRepository, QueueRepository queueRepository, SlaPolicyRepository slaPolicyRepository) {
+    public TicketController(TicketRepository ticketRepository, 
+                            UserRepository userRepository, 
+                            QueueRepository queueRepository,
+                            SlaPolicyRepository slaPolicyRepository) {
         this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
         this.queueRepository = queueRepository;
@@ -30,21 +26,26 @@ public class TicketController {
     }
 
     @GetMapping
-    public List<Ticket> findAll() {
-        return ticketRepository.findAll();
+    public List<TicketResponse> findAll() {
+        return ticketRepository.findAll().stream()
+                .map(TicketResponse::new)
+                .toList();
     }
 
     @GetMapping("/{id}")
-    public Ticket findById(@PathVariable Long id) {
-        return ticketRepository.findById(id).orElse(null);
+    public TicketResponse findById(@PathVariable Long id) {
+        Ticket ticket = ticketRepository.findById(id).orElseThrow();
+        return new TicketResponse(ticket);
     }
 
     @PostMapping
-    public Ticket create(@RequestBody Ticket ticket, @RequestParam Long requesterId, @RequestParam(required=false) Long slaPolicyId) {
+    public TicketResponse create(@RequestBody Ticket ticket, 
+                                 @RequestParam Long requesterId,
+                                 @RequestParam(required = false) Long slaPolicyId) {
         User requester = userRepository.findById(requesterId).orElseThrow();
         ticket.setRequester(requester);
         ticket.setCode("TCK-" + System.currentTimeMillis());
-
+        
         if (slaPolicyId != null) {
             SlaPolicy policy = slaPolicyRepository.findById(slaPolicyId).orElseThrow();
             ticket.setSlaPolicy(policy);
@@ -53,12 +54,13 @@ public class TicketController {
             ticket.setFirstResponseDueAt(now.plusMinutes(policy.getFirstResponseMinutes()));
             ticket.setResolutionDueAt(now.plusMinutes(policy.getResolutionMinutes()));
         }
-
-        return ticketRepository.save(ticket);
+        
+        Ticket saved = ticketRepository.save(ticket);
+        return new TicketResponse(saved);
     }
 
     @PutMapping("/{id}/status")
-    public Ticket updateStatus(@PathVariable Long id, @RequestParam String status) {
+    public TicketResponse updateStatus(@PathVariable Long id, @RequestParam String status) {
         Ticket ticket = ticketRepository.findById(id).orElseThrow();
         ticket.setStatus(TicketStatus.valueOf(status));
         
@@ -69,7 +71,27 @@ public class TicketController {
             ticket.setClosedAt(java.time.LocalDateTime.now());
         }
         
-        return ticketRepository.save(ticket);
+        Ticket saved = ticketRepository.save(ticket);
+        return new TicketResponse(saved);
+    }
+
+    @PutMapping("/{id}/assign")
+    public TicketResponse assign(@PathVariable Long id, @RequestParam Long agentId) {
+        Ticket ticket = ticketRepository.findById(id).orElseThrow();
+        User agent = userRepository.findById(agentId).orElseThrow();
+        ticket.setAssignee(agent);
+        ticket.setStatus(TicketStatus.OPEN);
+        Ticket saved = ticketRepository.save(ticket);
+        return new TicketResponse(saved);
+    }
+
+    @PutMapping("/{id}/queue")
+    public TicketResponse assignQueue(@PathVariable Long id, @RequestParam Long queueId) {
+        Ticket ticket = ticketRepository.findById(id).orElseThrow();
+        Queue queue = queueRepository.findById(queueId).orElseThrow();
+        ticket.setQueue(queue);
+        Ticket saved = ticketRepository.save(ticket);
+        return new TicketResponse(saved);
     }
 
     @DeleteMapping("/{id}")
@@ -77,50 +99,44 @@ public class TicketController {
         ticketRepository.deleteById(id);
     }
 
-    @PutMapping("/{id}/assign")
-    public Ticket assign(@PathVariable Long id, @RequestParam Long agentId) {
-        Ticket ticket = ticketRepository.findById(id).orElseThrow();
-        User agent = userRepository.findById(agentId).orElseThrow();
-        ticket.setAssignee(agent);
-        ticket.setStatus(TicketStatus.OPEN);
-        return ticketRepository.save(ticket);
-    }
-
     @GetMapping("/status/{status}")
-    public List<Ticket> findByStatus(@PathVariable String status) {
-        return ticketRepository.findByStatus(TicketStatus.valueOf(status));
+    public List<TicketResponse> findByStatus(@PathVariable String status) {
+        return ticketRepository.findByStatus(TicketStatus.valueOf(status)).stream()
+                .map(TicketResponse::new)
+                .toList();
     }
 
     @GetMapping("/priority/{priority}")
-    public List<Ticket> findByPriority(@PathVariable String priority) {
-        return ticketRepository.findByPriority(TicketPriority.valueOf(priority));
+    public List<TicketResponse> findByPriority(@PathVariable String priority) {
+        return ticketRepository.findByPriority(TicketPriority.valueOf(priority)).stream()
+                .map(TicketResponse::new)
+                .toList();
     }
 
     @GetMapping("/assignee/{agentId}")
-    public List<Ticket> findByAssignee(@PathVariable Long agentId) {
+    public List<TicketResponse> findByAssignee(@PathVariable Long agentId) {
         User agent = userRepository.findById(agentId).orElseThrow();
-        return ticketRepository.findByAssignee(agent);
-    }
-
-    @PutMapping("/{id}/queue")
-    public Ticket assignQueue(@PathVariable Long id, @RequestParam Long queueId) {
-        Ticket ticket = ticketRepository.findById(id).orElseThrow();
-        Queue queue = queueRepository.findById(queueId).orElseThrow();
-        ticket.setQueue(queue);
-        return ticketRepository.save(ticket);
+        return ticketRepository.findByAssignee(agent).stream()
+                .map(TicketResponse::new)
+                .toList();
     }
 
     @GetMapping("/queue/{queueId}")
-    public List<Ticket> findByQueue(@PathVariable Long queueId) {
+    public List<TicketResponse> findByQueue(@PathVariable Long queueId) {
         Queue queue = queueRepository.findById(queueId).orElseThrow();
-        return ticketRepository.findByQueue(queue);
+        return ticketRepository.findByQueue(queue).stream()
+                .map(TicketResponse::new)
+                .toList();
     }
 
     @GetMapping("/overdue")
-    public List<Ticket> findOverdue() {
+    public List<TicketResponse> findOverdue() {
         return ticketRepository.findByFirstResponseDueAtBeforeAndStatusNot(
-            java.time.LocalDateTime.now(), 
-            TicketStatus.CLOSED
-        );
+                java.time.LocalDateTime.now(), 
+                TicketStatus.CLOSED
+        ).stream()
+                .map(TicketResponse::new)
+                .toList();
     }
+
 }
