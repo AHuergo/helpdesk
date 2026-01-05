@@ -3,8 +3,11 @@ package com.anahuergo.helpdesk.controller;
 import com.anahuergo.helpdesk.domain.*;
 import com.anahuergo.helpdesk.dto.TicketResponse;
 import com.anahuergo.helpdesk.repository.*;
+import com.anahuergo.helpdesk.dto.TicketEventResponse;
+
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+
 
 @RestController
 @RequestMapping("/api/tickets")
@@ -14,15 +17,18 @@ public class TicketController {
     private final UserRepository userRepository;
     private final QueueRepository queueRepository;
     private final SlaPolicyRepository slaPolicyRepository;
+    private final TicketEventRepository ticketEventRepository;
 
     public TicketController(TicketRepository ticketRepository, 
                             UserRepository userRepository, 
                             QueueRepository queueRepository,
-                            SlaPolicyRepository slaPolicyRepository) {
+                            SlaPolicyRepository slaPolicyRepository,
+                            TicketEventRepository ticketEventRepository) {
         this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
         this.queueRepository = queueRepository;
         this.slaPolicyRepository = slaPolicyRepository;
+        this.ticketEventRepository = ticketEventRepository;
     }
 
     @GetMapping
@@ -60,8 +66,12 @@ public class TicketController {
     }
 
     @PutMapping("/{id}/status")
-    public TicketResponse updateStatus(@PathVariable Long id, @RequestParam String status) {
+    public TicketResponse updateStatus(@PathVariable Long id, 
+                                    @RequestParam String status,
+                                    @RequestParam(required = false) Long userId) {
         Ticket ticket = ticketRepository.findById(id).orElseThrow();
+        String oldStatus = ticket.getStatus().name();
+        
         ticket.setStatus(TicketStatus.valueOf(status));
         
         if (status.equals("RESOLVED")) {
@@ -72,16 +82,40 @@ public class TicketController {
         }
         
         Ticket saved = ticketRepository.save(ticket);
+        
+        // add event
+        TicketEvent event = new TicketEvent();
+        event.setTicket(saved);
+        event.setEventType("STATUS_CHANGED");
+        event.setOldValue(oldStatus);
+        event.setNewValue(status);
+        if (userId != null) {
+            event.setUser(userRepository.findById(userId).orElse(null));
+        }
+        ticketEventRepository.save(event);
+        
         return new TicketResponse(saved);
     }
 
     @PutMapping("/{id}/assign")
     public TicketResponse assign(@PathVariable Long id, @RequestParam Long agentId) {
         Ticket ticket = ticketRepository.findById(id).orElseThrow();
+        String oldAssignee = ticket.getAssignee() != null ? ticket.getAssignee().getName() : null;
+        
         User agent = userRepository.findById(agentId).orElseThrow();
         ticket.setAssignee(agent);
         ticket.setStatus(TicketStatus.OPEN);
         Ticket saved = ticketRepository.save(ticket);
+        
+        // event
+        TicketEvent event = new TicketEvent();
+        event.setTicket(saved);
+        event.setEventType("ASSIGNED");
+        event.setOldValue(oldAssignee);
+        event.setNewValue(agent.getName());
+        event.setUser(agent);
+        ticketEventRepository.save(event);
+        
         return new TicketResponse(saved);
     }
 
@@ -136,6 +170,14 @@ public class TicketController {
                 TicketStatus.CLOSED
         ).stream()
                 .map(TicketResponse::new)
+                .toList();
+    }
+
+    @GetMapping("/{id}/events")
+    public List<TicketEventResponse> getEvents(@PathVariable Long id) {
+        Ticket ticket = ticketRepository.findById(id).orElseThrow();
+        return ticketEventRepository.findByTicketOrderByCreatedAtAsc(ticket).stream()
+                .map(TicketEventResponse::new)
                 .toList();
     }
 
