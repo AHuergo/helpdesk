@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
@@ -84,6 +83,45 @@ public class UserControllerTest {
         var results = userController.findAll();
 
         assertTrue(results.size() >= 2);
+    }
+
+    @Test
+    void shouldRejectInvalidEmail() {
+        User user = new User();
+        user.setEmail("invalido");
+        user.setPassword("12345678");
+        user.setName("Test");
+        user.setSurname("User");
+
+        assertThrows(Exception.class, () -> {
+            userController.create(user);
+        });
+    }
+
+    @Test
+    void shouldRejectShortPassword() {
+        User user = new User();
+        user.setEmail("valid@test.com");
+        user.setPassword("123");
+        user.setName("Test");
+        user.setSurname("User");
+
+        assertThrows(Exception.class, () -> {
+            userController.create(user);
+        });
+    }
+
+    @Test
+    void shouldRejectEmptyName() {
+        User user = new User();
+        user.setEmail("valid2@test.com");
+        user.setPassword("12345678");
+        user.setName("");
+        user.setSurname("User");
+
+        assertThrows(Exception.class, () -> {
+            userController.create(user);
+        });
     }
 
 }

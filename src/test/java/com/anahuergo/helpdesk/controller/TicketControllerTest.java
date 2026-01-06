@@ -183,4 +183,24 @@ public class TicketControllerTest {
         assertNull(created.getSlaPolicyName());
     }
 
+    @Test
+    void shouldRejectEmptySubject() {
+        Ticket ticket = new Ticket();
+        ticket.setDescription("Test");
+
+        assertThrows(Exception.class, () -> {
+            ticket.setSubject("");
+        });
+    }
+
+    @Test
+    void shouldRejectNullSubject() {
+        Ticket ticket = new Ticket();
+        ticket.setDescription("Test");
+
+        assertThrows(Exception.class, () -> {
+            ticket.setSubject(null);
+        });
+    }
+
 }
