@@ -28,6 +28,7 @@ dependencies {
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.0")
+    testImplementation("org.springframework.boot:spring-boot-webmvc-test")
 }
 
 tasks.withType<Test> {
