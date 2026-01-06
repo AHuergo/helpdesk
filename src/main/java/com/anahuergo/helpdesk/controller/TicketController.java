@@ -4,7 +4,7 @@ import com.anahuergo.helpdesk.domain.*;
 import com.anahuergo.helpdesk.dto.TicketResponse;
 import com.anahuergo.helpdesk.repository.*;
 import com.anahuergo.helpdesk.dto.TicketEventResponse;
-
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -45,7 +45,7 @@ public class TicketController {
     }
 
     @PostMapping
-    public TicketResponse create(@RequestBody Ticket ticket, 
+    public TicketResponse create(@Valid @RequestBody Ticket ticket, 
                                  @RequestParam Long requesterId,
                                  @RequestParam(required = false) Long slaPolicyId) {
         User requester = userRepository.findById(requesterId).orElseThrow();

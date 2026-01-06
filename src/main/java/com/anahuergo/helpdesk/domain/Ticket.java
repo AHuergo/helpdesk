@@ -3,6 +3,7 @@ package com.anahuergo.helpdesk.domain;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import lombok.Data;
@@ -19,6 +20,8 @@ public class Ticket {
     @Column(unique = true, nullable = false)
     private String code;
 
+    @NotBlank(message = "El asunto es obligatorio")
+    @Size(max = 200, message = "El asunto no puede superar 200 caracteres")
     @Column(nullable = false)
     private String subject;
 

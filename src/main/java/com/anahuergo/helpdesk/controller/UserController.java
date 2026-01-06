@@ -5,6 +5,7 @@ import com.anahuergo.helpdesk.dto.UserResponse;
 import com.anahuergo.helpdesk.repository.UserRepository;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/users")
@@ -30,7 +31,7 @@ public class UserController {
     }
 
     @PostMapping
-    public UserResponse create(@RequestBody User user) {
+    public UserResponse create(@Valid @RequestBody User user) {
         User saved = userRepository.save(user);
         return new UserResponse(saved);
     }
