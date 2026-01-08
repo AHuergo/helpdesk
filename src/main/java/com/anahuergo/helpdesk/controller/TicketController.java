@@ -1,13 +1,14 @@
 package com.anahuergo.helpdesk.controller;
 
 import com.anahuergo.helpdesk.domain.*;
+import com.anahuergo.helpdesk.dto.TicketEventResponse;
 import com.anahuergo.helpdesk.dto.TicketResponse;
 import com.anahuergo.helpdesk.repository.*;
-import com.anahuergo.helpdesk.dto.TicketEventResponse;
+import com.anahuergo.helpdesk.security.CurrentUserService;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
-
 
 @RestController
 @RequestMapping("/api/tickets")
@@ -18,38 +19,62 @@ public class TicketController {
     private final QueueRepository queueRepository;
     private final SlaPolicyRepository slaPolicyRepository;
     private final TicketEventRepository ticketEventRepository;
+    private final CurrentUserService currentUserService;
 
     public TicketController(TicketRepository ticketRepository, 
                             UserRepository userRepository, 
                             QueueRepository queueRepository,
                             SlaPolicyRepository slaPolicyRepository,
-                            TicketEventRepository ticketEventRepository) {
+                            TicketEventRepository ticketEventRepository,
+                            CurrentUserService currentUserService) {
         this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
         this.queueRepository = queueRepository;
         this.slaPolicyRepository = slaPolicyRepository;
         this.ticketEventRepository = ticketEventRepository;
+        this.currentUserService = currentUserService;
     }
 
     @GetMapping
     public List<TicketResponse> findAll() {
-        return ticketRepository.findAll().stream()
+        Long tenantId = currentUserService.getCurrentTenantId();
+        if (tenantId == null) {
+            return ticketRepository.findAll().stream()
+                    .map(TicketResponse::new)
+                    .toList();
+        }
+        return ticketRepository.findByTenantId(tenantId).stream()
                 .map(TicketResponse::new)
                 .toList();
     }
 
     @GetMapping("/{id}")
     public TicketResponse findById(@PathVariable Long id) {
-        Ticket ticket = ticketRepository.findById(id).orElseThrow();
+        Long tenantId = currentUserService.getCurrentTenantId();
+        Ticket ticket;
+        if (tenantId == null) {
+            ticket = ticketRepository.findById(id).orElseThrow();
+        } else {
+            ticket = ticketRepository.findByIdAndTenantId(id, tenantId).orElseThrow();
+        }
         return new TicketResponse(ticket);
     }
 
     @PostMapping
     public TicketResponse create(@Valid @RequestBody Ticket ticket, 
-                                 @RequestParam Long requesterId,
+                                 @RequestParam(required = false) Long requesterId,
                                  @RequestParam(required = false) Long slaPolicyId) {
-        User requester = userRepository.findById(requesterId).orElseThrow();
+        User currentUser = currentUserService.getCurrentUser();
+
+        User requester;
+        if (requesterId != null) {
+            requester = userRepository.findById(requesterId).orElseThrow();
+        } else {
+            requester = currentUser;
+        }
+        
         ticket.setRequester(requester);
+        ticket.setTenant(currentUser.getTenant());
         ticket.setCode("TCK-" + System.currentTimeMillis());
         
         if (slaPolicyId != null) {
@@ -67,9 +92,16 @@ public class TicketController {
 
     @PutMapping("/{id}/status")
     public TicketResponse updateStatus(@PathVariable Long id, 
-                                    @RequestParam String status,
-                                    @RequestParam(required = false) Long userId) {
-        Ticket ticket = ticketRepository.findById(id).orElseThrow();
+                                       @RequestParam String status,
+                                       @RequestParam(required = false) Long userId) {
+        Long tenantId = currentUserService.getCurrentTenantId();
+        Ticket ticket;
+        if (tenantId == null) {
+            ticket = ticketRepository.findById(id).orElseThrow();
+        } else {
+            ticket = ticketRepository.findByIdAndTenantId(id, tenantId).orElseThrow();
+        }
+        
         String oldStatus = ticket.getStatus().name();
         
         ticket.setStatus(TicketStatus.valueOf(status));
@@ -83,7 +115,6 @@ public class TicketController {
         
         Ticket saved = ticketRepository.save(ticket);
         
-        // add event
         TicketEvent event = new TicketEvent();
         event.setTicket(saved);
         event.setEventType("STATUS_CHANGED");
@@ -98,8 +129,16 @@ public class TicketController {
     }
 
     @PutMapping("/{id}/assign")
+    @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
     public TicketResponse assign(@PathVariable Long id, @RequestParam Long agentId) {
-        Ticket ticket = ticketRepository.findById(id).orElseThrow();
+        Long tenantId = currentUserService.getCurrentTenantId();
+        Ticket ticket;
+        if (tenantId == null) {
+            ticket = ticketRepository.findById(id).orElseThrow();
+        } else {
+            ticket = ticketRepository.findByIdAndTenantId(id, tenantId).orElseThrow();
+        }
+        
         String oldAssignee = ticket.getAssignee() != null ? ticket.getAssignee().getName() : null;
         
         User agent = userRepository.findById(agentId).orElseThrow();
@@ -107,7 +146,6 @@ public class TicketController {
         ticket.setStatus(TicketStatus.OPEN);
         Ticket saved = ticketRepository.save(ticket);
         
-        // event
         TicketEvent event = new TicketEvent();
         event.setTicket(saved);
         event.setEventType("ASSIGNED");
@@ -120,8 +158,16 @@ public class TicketController {
     }
 
     @PutMapping("/{id}/queue")
+    @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
     public TicketResponse assignQueue(@PathVariable Long id, @RequestParam Long queueId) {
-        Ticket ticket = ticketRepository.findById(id).orElseThrow();
+        Long tenantId = currentUserService.getCurrentTenantId();
+        Ticket ticket;
+        if (tenantId == null) {
+            ticket = ticketRepository.findById(id).orElseThrow();
+        } else {
+            ticket = ticketRepository.findByIdAndTenantId(id, tenantId).orElseThrow();
+        }
+        
         Queue queue = queueRepository.findById(queueId).orElseThrow();
         ticket.setQueue(queue);
         Ticket saved = ticketRepository.save(ticket);
@@ -129,20 +175,37 @@ public class TicketController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public void delete(@PathVariable Long id) {
+        Long tenantId = currentUserService.getCurrentTenantId();
+        if (tenantId != null) {
+            ticketRepository.findByIdAndTenantId(id, tenantId).orElseThrow();
+        }
         ticketRepository.deleteById(id);
     }
 
     @GetMapping("/status/{status}")
     public List<TicketResponse> findByStatus(@PathVariable String status) {
-        return ticketRepository.findByStatus(TicketStatus.valueOf(status)).stream()
+        Long tenantId = currentUserService.getCurrentTenantId();
+        if (tenantId == null) {
+            return ticketRepository.findByStatus(TicketStatus.valueOf(status)).stream()
+                    .map(TicketResponse::new)
+                    .toList();
+        }
+        return ticketRepository.findByStatusAndTenantId(TicketStatus.valueOf(status), tenantId).stream()
                 .map(TicketResponse::new)
                 .toList();
     }
 
     @GetMapping("/priority/{priority}")
     public List<TicketResponse> findByPriority(@PathVariable String priority) {
-        return ticketRepository.findByPriority(TicketPriority.valueOf(priority)).stream()
+        Long tenantId = currentUserService.getCurrentTenantId();
+        if (tenantId == null) {
+            return ticketRepository.findByPriority(TicketPriority.valueOf(priority)).stream()
+                    .map(TicketResponse::new)
+                    .toList();
+        }
+        return ticketRepository.findByPriorityAndTenantId(TicketPriority.valueOf(priority), tenantId).stream()
                 .map(TicketResponse::new)
                 .toList();
     }
@@ -150,7 +213,13 @@ public class TicketController {
     @GetMapping("/assignee/{agentId}")
     public List<TicketResponse> findByAssignee(@PathVariable Long agentId) {
         User agent = userRepository.findById(agentId).orElseThrow();
-        return ticketRepository.findByAssignee(agent).stream()
+        Long tenantId = currentUserService.getCurrentTenantId();
+        if (tenantId == null) {
+            return ticketRepository.findByAssignee(agent).stream()
+                    .map(TicketResponse::new)
+                    .toList();
+        }
+        return ticketRepository.findByAssigneeAndTenantId(agent, tenantId).stream()
                 .map(TicketResponse::new)
                 .toList();
     }
@@ -158,16 +227,32 @@ public class TicketController {
     @GetMapping("/queue/{queueId}")
     public List<TicketResponse> findByQueue(@PathVariable Long queueId) {
         Queue queue = queueRepository.findById(queueId).orElseThrow();
-        return ticketRepository.findByQueue(queue).stream()
+        Long tenantId = currentUserService.getCurrentTenantId();
+        if (tenantId == null) {
+            return ticketRepository.findByQueue(queue).stream()
+                    .map(TicketResponse::new)
+                    .toList();
+        }
+        return ticketRepository.findByQueueAndTenantId(queue, tenantId).stream()
                 .map(TicketResponse::new)
                 .toList();
     }
 
     @GetMapping("/overdue")
     public List<TicketResponse> findOverdue() {
-        return ticketRepository.findByFirstResponseDueAtBeforeAndStatusNot(
+        Long tenantId = currentUserService.getCurrentTenantId();
+        if (tenantId == null) {
+            return ticketRepository.findByFirstResponseDueAtBeforeAndStatusNot(
+                    java.time.LocalDateTime.now(), 
+                    TicketStatus.CLOSED
+            ).stream()
+                    .map(TicketResponse::new)
+                    .toList();
+        }
+        return ticketRepository.findByFirstResponseDueAtBeforeAndStatusNotAndTenantId(
                 java.time.LocalDateTime.now(), 
-                TicketStatus.CLOSED
+                TicketStatus.CLOSED,
+                tenantId
         ).stream()
                 .map(TicketResponse::new)
                 .toList();
@@ -175,7 +260,13 @@ public class TicketController {
 
     @GetMapping("/{id}/events")
     public List<TicketEventResponse> getEvents(@PathVariable Long id) {
-        Ticket ticket = ticketRepository.findById(id).orElseThrow();
+        Long tenantId = currentUserService.getCurrentTenantId();
+        Ticket ticket;
+        if (tenantId == null) {
+            ticket = ticketRepository.findById(id).orElseThrow();
+        } else {
+            ticket = ticketRepository.findByIdAndTenantId(id, tenantId).orElseThrow();
+        }
         return ticketEventRepository.findByTicketOrderByCreatedAtAsc(ticket).stream()
                 .map(TicketEventResponse::new)
                 .toList();

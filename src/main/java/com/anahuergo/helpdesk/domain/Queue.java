@@ -21,4 +21,8 @@ public class Queue {
     @Column(nullable=false)
     private boolean active = true;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tenant_id")
+    private Tenant tenant;
+
 }

@@ -73,6 +73,10 @@ public class Ticket {
         this.subject = subject;
     }
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tenant_id")
+    private Tenant tenant;  
+
 }
 
 

@@ -33,10 +33,10 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(response);
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGeneral(Exception ex) {
-        ErrorResponse response = new ErrorResponse(500, "Error interno del servidor", List.of(ex.getMessage()));
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(org.springframework.security.access.AccessDeniedException ex) {
+        ErrorResponse response = new ErrorResponse(403, "No tienes permiso para esta acción", List.of());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
 
 }
