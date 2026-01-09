@@ -1,0 +1,205 @@
+.ticket-detail {
+  max-width: 800px;
+}
+
+.back-btn {
+  background: none;
+  border: 1px solid #ddd;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.back-btn:hover {
+  background: #f5f5f5;
+}
+
+.ticket-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #eee;
+}
+
+.ticket-header h2 {
+  margin: 0;
+  color: #333;
+}
+
+.ticket-code {
+  background: #e8e8e8;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #666;
+}
+
+.ticket-info {
+  background: #f9f9f9;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.info-row:last-child {
+  margin-bottom: 0;
+}
+
+.info-row .label {
+  font-weight: 600;
+  color: #666;
+  min-width: 100px;
+}
+
+.info-row button {
+  padding: 4px 12px;
+  background: #1a73e8;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-left: 10px;
+}
+
+.ticket-description {
+  background: white;
+  padding: 20px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.ticket-description h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.ticket-description p {
+  margin: 0;
+  color: #555;
+  line-height: 1.6;
+}
+
+.ticket-messages h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.messages-list {
+  margin-bottom: 20px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.message {
+  background: #f5f5f5;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.message.internal {
+  background: #fff8e1;
+  border-left: 3px solid #ffc107;
+}
+
+.message-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.message-header strong {
+  color: #333;
+}
+
+.message-header span {
+  color: #888;
+  font-size: 12px;
+}
+
+.internal-badge {
+  background: #ffc107;
+  color: #333;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.message p {
+  margin: 0;
+  color: #555;
+  line-height: 1.5;
+}
+
+.message-form {
+  display: flex;
+  gap: 10px;
+}
+
+.message-form textarea {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  resize: vertical;
+  color: #333;
+}
+
+.message-form button {
+  padding: 12px 24px;
+  background: #1a73e8;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  align-self: flex-end;
+}
+
+.message-form button:hover {
+  background: #1557b0;
+}
+
+.status {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status.new { background: #e3f2fd; color: #1565c0; }
+.status.open { background: #fff3e0; color: #ef6c00; }
+.status.resolved { background: #e8f5e9; color: #2e7d32; }
+.status.closed { background: #f5f5f5; color: #666; }
+
+.priority {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.priority.low { background: #e8f5e9; color: #2e7d32; }
+.priority.normal { background: #e3f2fd; color: #1565c0; }
+.priority.high { background: #fff3e0; color: #ef6c00; }
+.priority.urgent { background: #ffebee; color: #c62828; }
