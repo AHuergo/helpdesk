@@ -37,25 +37,25 @@ public class TicketController {
 
     @GetMapping
     public List<TicketResponse> findAll() {
-        Long tenantId = currentUserService.getCurrentTenantId();
-        if (tenantId == null) {
+        Long companyId = currentUserService.getCurrentCompanyId();
+        if (companyId == null) {
             return ticketRepository.findAll().stream()
                     .map(TicketResponse::new)
                     .toList();
         }
-        return ticketRepository.findByTenantId(tenantId).stream()
+        return ticketRepository.findByCompanyId(companyId).stream()
                 .map(TicketResponse::new)
                 .toList();
     }
 
     @GetMapping("/{id}")
     public TicketResponse findById(@PathVariable Long id) {
-        Long tenantId = currentUserService.getCurrentTenantId();
+        Long companyId = currentUserService.getCurrentCompanyId();
         Ticket ticket;
-        if (tenantId == null) {
+        if (companyId == null) {
             ticket = ticketRepository.findById(id).orElseThrow();
         } else {
-            ticket = ticketRepository.findByIdAndTenantId(id, tenantId).orElseThrow();
+            ticket = ticketRepository.findByIdAndCompanyId(id, companyId).orElseThrow();
         }
         return new TicketResponse(ticket);
     }
@@ -65,7 +65,7 @@ public class TicketController {
                                  @RequestParam(required = false) Long requesterId,
                                  @RequestParam(required = false) Long slaPolicyId) {
         User currentUser = currentUserService.getCurrentUser();
-
+        
         User requester;
         if (requesterId != null) {
             requester = userRepository.findById(requesterId).orElseThrow();
@@ -74,7 +74,7 @@ public class TicketController {
         }
         
         ticket.setRequester(requester);
-        ticket.setTenant(currentUser.getTenant());
+        ticket.setCompany(currentUser.getCompany());
         ticket.setCode("TCK-" + System.currentTimeMillis());
         
         if (slaPolicyId != null) {
@@ -94,12 +94,12 @@ public class TicketController {
     public TicketResponse updateStatus(@PathVariable Long id, 
                                        @RequestParam String status,
                                        @RequestParam(required = false) Long userId) {
-        Long tenantId = currentUserService.getCurrentTenantId();
+        Long companyId = currentUserService.getCurrentCompanyId();
         Ticket ticket;
-        if (tenantId == null) {
+        if (companyId == null) {
             ticket = ticketRepository.findById(id).orElseThrow();
         } else {
-            ticket = ticketRepository.findByIdAndTenantId(id, tenantId).orElseThrow();
+            ticket = ticketRepository.findByIdAndCompanyId(id, companyId).orElseThrow();
         }
         
         String oldStatus = ticket.getStatus().name();
@@ -131,12 +131,12 @@ public class TicketController {
     @PutMapping("/{id}/assign")
     @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
     public TicketResponse assign(@PathVariable Long id, @RequestParam Long agentId) {
-        Long tenantId = currentUserService.getCurrentTenantId();
+        Long companyId = currentUserService.getCurrentCompanyId();
         Ticket ticket;
-        if (tenantId == null) {
+        if (companyId == null) {
             ticket = ticketRepository.findById(id).orElseThrow();
         } else {
-            ticket = ticketRepository.findByIdAndTenantId(id, tenantId).orElseThrow();
+            ticket = ticketRepository.findByIdAndCompanyId(id, companyId).orElseThrow();
         }
         
         String oldAssignee = ticket.getAssignee() != null ? ticket.getAssignee().getName() : null;
@@ -160,12 +160,12 @@ public class TicketController {
     @PutMapping("/{id}/queue")
     @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
     public TicketResponse assignQueue(@PathVariable Long id, @RequestParam Long queueId) {
-        Long tenantId = currentUserService.getCurrentTenantId();
+        Long companyId = currentUserService.getCurrentCompanyId();
         Ticket ticket;
-        if (tenantId == null) {
+        if (companyId == null) {
             ticket = ticketRepository.findById(id).orElseThrow();
         } else {
-            ticket = ticketRepository.findByIdAndTenantId(id, tenantId).orElseThrow();
+            ticket = ticketRepository.findByIdAndCompanyId(id, companyId).orElseThrow();
         }
         
         Queue queue = queueRepository.findById(queueId).orElseThrow();
@@ -177,35 +177,35 @@ public class TicketController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public void delete(@PathVariable Long id) {
-        Long tenantId = currentUserService.getCurrentTenantId();
-        if (tenantId != null) {
-            ticketRepository.findByIdAndTenantId(id, tenantId).orElseThrow();
+        Long companyId = currentUserService.getCurrentCompanyId();
+        if (companyId != null) {
+            ticketRepository.findByIdAndCompanyId(id, companyId).orElseThrow();
         }
         ticketRepository.deleteById(id);
     }
 
     @GetMapping("/status/{status}")
     public List<TicketResponse> findByStatus(@PathVariable String status) {
-        Long tenantId = currentUserService.getCurrentTenantId();
-        if (tenantId == null) {
+        Long companyId = currentUserService.getCurrentCompanyId();
+        if (companyId == null) {
             return ticketRepository.findByStatus(TicketStatus.valueOf(status)).stream()
                     .map(TicketResponse::new)
                     .toList();
         }
-        return ticketRepository.findByStatusAndTenantId(TicketStatus.valueOf(status), tenantId).stream()
+        return ticketRepository.findByStatusAndCompanyId(TicketStatus.valueOf(status), companyId).stream()
                 .map(TicketResponse::new)
                 .toList();
     }
 
     @GetMapping("/priority/{priority}")
     public List<TicketResponse> findByPriority(@PathVariable String priority) {
-        Long tenantId = currentUserService.getCurrentTenantId();
-        if (tenantId == null) {
+        Long companyId = currentUserService.getCurrentCompanyId();
+        if (companyId == null) {
             return ticketRepository.findByPriority(TicketPriority.valueOf(priority)).stream()
                     .map(TicketResponse::new)
                     .toList();
         }
-        return ticketRepository.findByPriorityAndTenantId(TicketPriority.valueOf(priority), tenantId).stream()
+        return ticketRepository.findByPriorityAndCompanyId(TicketPriority.valueOf(priority), companyId).stream()
                 .map(TicketResponse::new)
                 .toList();
     }
@@ -213,13 +213,13 @@ public class TicketController {
     @GetMapping("/assignee/{agentId}")
     public List<TicketResponse> findByAssignee(@PathVariable Long agentId) {
         User agent = userRepository.findById(agentId).orElseThrow();
-        Long tenantId = currentUserService.getCurrentTenantId();
-        if (tenantId == null) {
+        Long companyId = currentUserService.getCurrentCompanyId();
+        if (companyId == null) {
             return ticketRepository.findByAssignee(agent).stream()
                     .map(TicketResponse::new)
                     .toList();
         }
-        return ticketRepository.findByAssigneeAndTenantId(agent, tenantId).stream()
+        return ticketRepository.findByAssigneeAndCompanyId(agent, companyId).stream()
                 .map(TicketResponse::new)
                 .toList();
     }
@@ -227,21 +227,21 @@ public class TicketController {
     @GetMapping("/queue/{queueId}")
     public List<TicketResponse> findByQueue(@PathVariable Long queueId) {
         Queue queue = queueRepository.findById(queueId).orElseThrow();
-        Long tenantId = currentUserService.getCurrentTenantId();
-        if (tenantId == null) {
+        Long companyId = currentUserService.getCurrentCompanyId();
+        if (companyId == null) {
             return ticketRepository.findByQueue(queue).stream()
                     .map(TicketResponse::new)
                     .toList();
         }
-        return ticketRepository.findByQueueAndTenantId(queue, tenantId).stream()
+        return ticketRepository.findByQueueAndCompanyId(queue, companyId).stream()
                 .map(TicketResponse::new)
                 .toList();
     }
 
     @GetMapping("/overdue")
     public List<TicketResponse> findOverdue() {
-        Long tenantId = currentUserService.getCurrentTenantId();
-        if (tenantId == null) {
+        Long companyId = currentUserService.getCurrentCompanyId();
+        if (companyId == null) {
             return ticketRepository.findByFirstResponseDueAtBeforeAndStatusNot(
                     java.time.LocalDateTime.now(), 
                     TicketStatus.CLOSED
@@ -249,10 +249,10 @@ public class TicketController {
                     .map(TicketResponse::new)
                     .toList();
         }
-        return ticketRepository.findByFirstResponseDueAtBeforeAndStatusNotAndTenantId(
+        return ticketRepository.findByFirstResponseDueAtBeforeAndStatusNotAndCompanyId(
                 java.time.LocalDateTime.now(), 
                 TicketStatus.CLOSED,
-                tenantId
+                companyId
         ).stream()
                 .map(TicketResponse::new)
                 .toList();
@@ -260,12 +260,12 @@ public class TicketController {
 
     @GetMapping("/{id}/events")
     public List<TicketEventResponse> getEvents(@PathVariable Long id) {
-        Long tenantId = currentUserService.getCurrentTenantId();
+        Long companyId = currentUserService.getCurrentCompanyId();
         Ticket ticket;
-        if (tenantId == null) {
+        if (companyId == null) {
             ticket = ticketRepository.findById(id).orElseThrow();
         } else {
-            ticket = ticketRepository.findByIdAndTenantId(id, tenantId).orElseThrow();
+            ticket = ticketRepository.findByIdAndCompanyId(id, companyId).orElseThrow();
         }
         return ticketEventRepository.findByTicketOrderByCreatedAtAsc(ticket).stream()
                 .map(TicketEventResponse::new)

@@ -74,8 +74,8 @@ public class Ticket {
     }
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tenant_id")
-    private Tenant tenant;  
+    @JoinColumn(name = "company_id")
+    private Company company;
 
 }
 

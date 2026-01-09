@@ -8,21 +8,21 @@ import java.time.LocalDateTime;
 
 public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
-    List<Ticket> findByTenantId(Long tenantId);
+    List<Ticket> findByCompanyId(Long companyId);
 
-    Optional<Ticket> findByIdAndTenantId(Long id, Long tenantId);
+    Optional<Ticket> findByIdAndCompanyId(Long id, Long companyId);
 
-    List<Ticket> findByStatusAndTenantId(TicketStatus status, Long tenantId);
+    List<Ticket> findByStatusAndCompanyId(TicketStatus status, Long companyId);
 
-    List<Ticket> findByPriorityAndTenantId(TicketPriority priority, Long tenantId);
+    List<Ticket> findByPriorityAndCompanyId(TicketPriority priority, Long companyId);
 
-    List<Ticket> findByAssigneeAndTenantId(User assignee, Long tenantId);
+    List<Ticket> findByAssigneeAndCompanyId(User assignee, Long companyId);
 
-    List<Ticket> findByRequesterAndTenantId(User requester, Long tenantId);
+    List<Ticket> findByRequesterAndCompanyId(User requester, Long companyId);
 
-    List<Ticket> findByQueueAndTenantId(Queue queue, Long tenantId);
+    List<Ticket> findByQueueAndCompanyId(Queue queue, Long companyId);
 
-    List<Ticket> findByFirstResponseDueAtBeforeAndStatusNotAndTenantId(LocalDateTime date, TicketStatus status, Long tenantId);
+    List<Ticket> findByFirstResponseDueAtBeforeAndStatusNotAndCompanyId(LocalDateTime date, TicketStatus status, Long companyId);
 
     List<Ticket> findByStatus(TicketStatus status);
     List<Ticket> findByPriority(TicketPriority priority);

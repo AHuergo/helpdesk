@@ -42,7 +42,7 @@ public class User {
     private LocalDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tenant_id")
-    private Tenant tenant;
+    @JoinColumn(name = "company_id")
+    private Company company;
 
 }

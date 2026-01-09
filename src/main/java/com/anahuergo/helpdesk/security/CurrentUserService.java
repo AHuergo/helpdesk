@@ -19,10 +19,10 @@ public class CurrentUserService {
         return userRepository.findByEmail(email).orElse(null);
     }
 
-    public Long getCurrentTenantId() {
+    public Long getCurrentCompanyId() {
         User user = getCurrentUser();
-        if (user != null && user.getTenant() != null) {
-            return user.getTenant().getId();
+        if (user != null && user.getCompany() != null) {
+            return user.getCompany().getId();
         }
         return null;
     }
